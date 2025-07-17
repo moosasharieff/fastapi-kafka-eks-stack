@@ -1,0 +1,44 @@
+# Web Framework
+fastapi
+uvicorn[standard]
+
+# Kafka (Async)
+aiokafka
+
+# PostgreSQL + ORM
+sqlmodel
+asyncpg
+
+# Email (Async)
+aiosmtplib
+
+# Tracing
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp
+opentelemetry-instrumentation
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-aiokafka
+
+# Environment config
+pydantic-settings
+python-dotenv
+
+# Logging
+loguru
+
+# Testing
+pytest
+pytest-asyncio
+httpx
+coverage
+
+# Optional: Prometheus instrumentation
+prometheus-fastapi-instrumentator
+
+# Linting
+ruff
+mypy
+
+# Formatting
+black
