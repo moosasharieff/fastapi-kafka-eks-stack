@@ -2,7 +2,6 @@
 
 from fastapi import FastAPI
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.aiokafka import AiokafkaInstrumentor
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -25,4 +24,3 @@ def init_tracer(app: FastAPI) -> None:
     set_tracer_provider(tracer_provider)
 
     FastAPIInstrumentor.instrument_app(app)
-    AiokafkaInstrumentor().instrument()
