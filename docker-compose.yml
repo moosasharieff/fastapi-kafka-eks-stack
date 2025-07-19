@@ -111,7 +111,8 @@ services:
     command:
       - --kafka.server=redpanda:9092
     depends_on:
-      - redpanda
+      redpanda:
+        condition: service_healthy
 
 volumes:
   pg_data:
