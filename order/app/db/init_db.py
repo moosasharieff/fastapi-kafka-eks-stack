@@ -8,6 +8,7 @@ from order.app.db.session import engine
 logger = logging.getLogger("db-init")
 tracer = trace.get_tracer(__name__)
 
+
 async def create_db() -> None:
     """
     Asynchronously create all database tables based on SQLModel metadata.

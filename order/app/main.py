@@ -47,7 +47,7 @@ app = FastAPI(
     title="Order Service",
     version="1.0.0",
     description="Handles order creation and publishes to Kafka.",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Register Prometheus instrumentation BEFORE app starts
