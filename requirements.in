@@ -19,6 +19,7 @@ opentelemetry-exporter-otlp
 opentelemetry-instrumentation
 opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-aiokafka
+opentelemetry-exporter-prometheus
 
 # Environment config
 pydantic-settings

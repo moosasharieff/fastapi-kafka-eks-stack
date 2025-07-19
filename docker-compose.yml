@@ -1,12 +1,11 @@
-version: "3.9"
 
 services:
   postgres:
     image: postgres:14
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: orderdb
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
@@ -16,6 +15,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    env_file:
+      - .env
 
   redpanda:
     image: redpandadata/redpanda:v23.3.3
@@ -54,8 +55,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
-      POSTGRES_DSN: postgresql+asyncpg://postgres:postgres@postgres:5432/orderdb
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      POSTGRES_DSN: ${POSTGRES_DSN}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       SERVICE_NAME: order-service
     depends_on:
@@ -68,5 +69,41 @@ services:
     env_file:
       - .env
 
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"  # Localhost access: http://localhost:9090
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:12.0.2
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana-storage:/var/lib/grafana
+
+  postgres-exporter:
+    image: wrouesnel/postgres_exporter
+    ports:
+      - "9187:9187"
+    environment:
+      DATA_SOURCE_NAME: ${POSTGRES_EXPORTER_DSN}
+    depends_on:
+      - postgres
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.49
+    container_name: jaeger
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4320:4320"    # OTLP gRPC
+    restart: unless-stopped
+
 volumes:
   pg_data:
+  grafana-storage:

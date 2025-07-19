@@ -15,6 +15,7 @@ SessionLocal = async_sessionmaker(
     bind=engine, class_=AsyncSession, expire_on_commit=False
 )
 
+
 # Dependency-injected session generator for FastAPI
 async def get_session() -> AsyncSession:
     """
