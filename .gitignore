@@ -216,3 +216,6 @@ commit_msg.txt
 .terraform.lock.hcl
 crash.log
 *.tfplan
+
+# GitHub
+.secrets
