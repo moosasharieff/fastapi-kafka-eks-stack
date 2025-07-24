@@ -34,26 +34,8 @@ resource "aws_eks_node_group" "default" {
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly
   ]
 
-}
-
-
-resource "kubernetes_config_map" "aws_auth" {
-  metadata {
-    name = "aws-auth"
-    namespace = "kube-system"
+  tags = {
+    Name = "${var.project}-${var.cluster_name}-node"
   }
 
-  data = {
-    mapRoles = yamlencode([
-      {
-        rolearn = aws_iam_role.eks_node_role.arn
-        username = "system:node:{{EC2PrivateDNSName}}"
-        group = [
-          "system:bootstrappers",
-          "system:nodes"
-        ]
-      }])
-  }
-
-  depends_on = [aws_eks_node_group.default]
 }
