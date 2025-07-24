@@ -9,7 +9,9 @@ module "vpc" {
 module "eks" {
   source = "./modules/eks"
 
-  project      = var.project
-  cluster_name = var.cluster_name
+  project            = var.project
+  cluster_name       = var.cluster_name
+  private_subnet_ids = module.vpc.private_subnet_ids
+  eks_instance_type  = var.eks_instance_type
 
 }
