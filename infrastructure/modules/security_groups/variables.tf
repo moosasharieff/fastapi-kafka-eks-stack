@@ -5,3 +5,8 @@ variable "rds_ingress_cidr_blocks" {
   type = list(string)
   default = ["0.0.0.0/0"]
 }
+
+variable "vpc_id" {
+  description = "ID of VPC of which this security group is to be part off"
+  type = string
+}
