@@ -1,0 +1,53 @@
+name: 'Terraform Plan on Commit'
+
+on:
+  push:
+    branches:
+      - '**'  # Runs on any branch push
+
+env:
+  TF_CLOUD_ORGANIZATION: "Moosa-Personal-TF-Org"
+  TF_API_TOKEN: "${{ secrets.TF_API_TOKEN }}"
+  TF_WORKSPACE: "fastapi-kafka-eks-stack"
+  CONFIG_DIRECTORY: "./"
+
+jobs:
+  terraform:
+    name: "Terraform Plan on Commit"
+    runs-on: ubuntu-latest
+    if: github.repository != 'hashicorp-education/fastapi-kafka-eks-stack'
+    permissions:
+      contents: read
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v3
+
+      - name: 📦 Upload Configuration
+        uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.0.0
+        id: plan-upload
+        with:
+          workspace: ${{ env.TF_WORKSPACE }}
+          directory: ${{ env.CONFIG_DIRECTORY }}
+          speculative: true
+
+      - name: 🧾 Create Plan Run
+        uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
+        id: plan-run
+        with:
+          workspace: ${{ env.TF_WORKSPACE }}
+          configuration_version: ${{ steps.plan-upload.outputs.configuration_version_id }}
+          plan_only: true
+
+      - name: 📊 Output Plan Summary
+        uses: hashicorp/tfc-workflows-github/actions/plan-output@v1.0.0
+        id: plan-output
+        with:
+          plan: ${{ fromJSON(steps.plan-run.outputs.payload).data.relationships.plan.data.id }}
+
+      - name: 🖨 Print Plan to Logs
+        run: |
+          echo "Plan Summary:"
+          echo "Add: ${{ steps.plan-output.outputs.add }}"
+          echo "Change: ${{ steps.plan-output.outputs.change }}"
+          echo "Destroy: ${{ steps.plan-output.outputs.destroy }}"
+          echo "Link to plan: ${{ steps.plan-run.outputs.run_link }}"
