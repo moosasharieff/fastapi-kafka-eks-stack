@@ -1,0 +1,56 @@
+name: 'Terraform Apply'
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  TF_CLOUD_ORGANIZATION: "Moosa-Personal-TF-Org"
+  TF_API_TOKEN: "${{ secrets.TF_API_TOKEN }}"
+  TF_WORKSPACE: "fastapi-kafka-eks-stack"
+  CONFIG_DIRECTORY: "./"
+
+jobs:
+  plan:
+    if: github.repository != 'hashicorp-education/learn-terraform-github-actions'
+    name: "Create TFC Run"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      RUN_ID: ${{ steps.apply-run.outputs.run_id }}
+      IS_CONFIRMABLE: ${{ fromJSON(steps.apply-run.outputs.payload).data.attributes.actions.is_confirmable }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload Configuration
+        id: apply-upload
+        uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.0.0
+        with:
+          workspace: ${{ env.TF_WORKSPACE }}
+          directory: ${{ env.CONFIG_DIRECTORY }}
+
+      - name: Create Apply Run
+        id: apply-run
+        uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
+        with:
+          workspace: ${{ env.TF_WORKSPACE }}
+          configuration_version: ${{ steps.apply-upload.outputs.configuration_version_id }}
+
+  apply:
+    name: "Terraform Apply"
+    needs: plan
+    # Gate on environment approval OR allow bypass via secret
+    if: needs.plan.outputs.IS_CONFIRMABLE == 'true' || secrets.LOCAL_BYPASS_APPROVAL == 'true'
+    environment:
+      name: production
+      url: https://app.terraform.io/app/${{ env.TF_CLOUD_ORGANIZATION }}/workspaces/${{ env.TF_WORKSPACE }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply
+        id: apply
+        uses: hashicorp/tfc-workflows-github/actions/apply-run@v1.0.0
+        with:
+          run: ${{ needs.plan.outputs.RUN_ID }}
+          comment: "Apply Run from GitHub Actions CI ${{ github.sha }}"
