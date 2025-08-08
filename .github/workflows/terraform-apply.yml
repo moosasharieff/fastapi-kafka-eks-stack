@@ -42,7 +42,7 @@ jobs:
     name: "Terraform Apply"
     needs: plan
     # Gate on environment approval OR allow bypass via secret
-    if: needs.plan.outputs.IS_CONFIRMABLE == 'true' || secrets.LOCAL_BYPASS_APPROVAL == 'true'
+    if: needs.plan.outputs.IS_CONFIRMABLE == 'true' || env.LOCAL_BYPASS_APPROVAL == 'true'
     environment:
       name: production
       url: https://app.terraform.io/app/${{ env.TF_CLOUD_ORGANIZATION }}/workspaces/${{ env.TF_WORKSPACE }}
