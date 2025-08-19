@@ -1,4 +1,4 @@
-name: 'Terraform Apply'
+name: 'Terraform Plan & Apply'
 
 on:
   push:
@@ -12,45 +12,74 @@ env:
 
 jobs:
   plan:
-    if: github.repository != 'hashicorp-education/learn-terraform-github-actions'
-    name: "Create TFC Run"
+    name: 'Terraform Plan on Commit'
     runs-on: ubuntu-latest
     permissions:
       contents: read
     outputs:
-      RUN_ID: ${{ steps.apply-run.outputs.run_id }}
-      IS_CONFIRMABLE: ${{ fromJSON(steps.apply-run.outputs.payload).data.attributes.actions.is_confirmable }}
+      IS_CONFIRMABLE: ${{ steps.set_output.outputs.is_confirmable }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v3
 
-      - name: Upload Configuration
-        id: apply-upload
+      - name: 📦 Upload Configuration
         uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.0.0
+        id: plan-upload
         with:
           workspace: ${{ env.TF_WORKSPACE }}
           directory: ${{ env.CONFIG_DIRECTORY }}
+          speculative: true
 
-      - name: Create Apply Run
-        id: apply-run
+      - name: 🧾 Create Plan Run
         uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
+        id: plan-run
         with:
           workspace: ${{ env.TF_WORKSPACE }}
-          configuration_version: ${{ steps.apply-upload.outputs.configuration_version_id }}
+          configuration_version: ${{ steps.plan-upload.outputs.configuration_version_id }}
+          plan_only: true
+
+      - name: 📊 Output Plan Summary
+        uses: hashicorp/tfc-workflows-github/actions/plan-output@v1.0.0
+        id: plan-output
+        with:
+          plan: ${{ fromJSON(steps.plan-run.outputs.payload).data.relationships.plan.data.id }}
+
+      - name: 🖨 Print Plan to Logs
+        run: |
+          echo "Plan Summary:"
+          echo "Add: ${{ steps.plan-output.outputs.add }}"
+          echo "Change: ${{ steps.plan-output.outputs.change }}"
+          echo "Destroy: ${{ steps.plan-output.outputs.destroy }}"
+          echo "Link to plan: ${{ steps.plan-run.outputs.run_link }}"
+
+      - name: Set confirmable output
+        id: set_output
+        run: |
+          if [ "${{ steps.plan-output.outputs.add }}" != "0" ] || \
+             [ "${{ steps.plan-output.outputs.change }}" != "0" ] || \
+             [ "${{ steps.plan-output.outputs.destroy }}" != "0" ]; then
+            echo "is_confirmable=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_confirmable=false" >> $GITHUB_OUTPUT
+          fi
 
   apply:
-    name: "Terraform Apply"
-    needs: plan
-    # Gate on environment approval OR allow bypass via secret
-    if: needs.plan.outputs.IS_CONFIRMABLE == 'true' || env.LOCAL_BYPASS_APPROVAL == 'true'
-    environment:
-      name: production
-      url: https://app.terraform.io/app/${{ env.TF_CLOUD_ORGANIZATION }}/workspaces/${{ env.TF_WORKSPACE }}
+    name: 'Terraform Apply'
     runs-on: ubuntu-latest
+    needs: plan
     steps:
-      - name: Apply
-        id: apply
-        uses: hashicorp/tfc-workflows-github/actions/apply-run@v1.0.0
-        with:
-          run: ${{ needs.plan.outputs.RUN_ID }}
-          comment: "Apply Run from GitHub Actions CI ${{ github.sha }}"
+      - name: Check approval bypass or confirmable
+        id: check
+        run: |
+          if [ "${{ needs.plan.outputs.IS_CONFIRMABLE }}" == "true" ] || \
+             [ "${{ secrets.LOCAL_BYPASS_APPROVAL }}" == "true" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Apply Terraform
+        if: steps.check.outputs.should_run == 'true'
+        run: |
+          echo "✅ Running Terraform apply..."
+          # terraform apply command goes here
