@@ -2,7 +2,7 @@
 
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
@@ -18,13 +18,13 @@ tracer = trace.get_tracer(__name__)
 
 
 @router.post("/order")
-async def create_order(order_data: Order, session: Session = Depends(get_session)):
+async def create_order(order_data: Order, session: AsyncSession = Depends(get_session)):
     """
     Create a new order in the database and publish the event to Kafka.
 
     Args:
         order_data (OrderCreate): The order details from the request body.
-        session (Session): SQLModel database session (injected).
+        session (AsyncSession): SQLModel database session (injected).
 
     Returns:
         dict: Success message and created order ID.
@@ -34,8 +34,8 @@ async def create_order(order_data: Order, session: Session = Depends(get_session
             # Persist order to DB
             order = Order(**order_data.model_dump())
             session.add(order)
-            session.commit()
-            session.refresh(order)
+            await session.commit()
+            await session.refresh(order)
 
             # Add trace metadata
             span.set_attribute("order.id", order.id)
@@ -66,7 +66,7 @@ async def create_order(order_data: Order, session: Session = Depends(get_session
         except SQLAlchemyError as db_err:
             logger.error("Database error during order creation", exc_info=True)
             span.set_status(Status(StatusCode.ERROR, str(db_err)))
-            session.rollback()
+            await session.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database error while creating order",
